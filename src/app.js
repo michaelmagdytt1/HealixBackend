@@ -7,6 +7,8 @@ require('dotenv').config();           // 2. تفعيل قراءة ملف الـ 
 // استدعاء الروابط (Routes)
 const authRoutes = require('./routes/authRoutes');
 const healthRoutes = require('./routes/healthRoutes');
+const measurementRoutes = require('./routes/measurementRoutes'); // 🚀 ضفنا مسارات القياسات والـ Dashboard
+const chatRoutes = require('./routes/chatRoutes');               // 🚀 ضفنا مسارات الشات الحقيقي الجديد
 
 const app = express();
 
@@ -21,8 +23,10 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Routes
-app.use('/api/auth', authRoutes);     // بوابات الدخول
-app.use('/api/health', healthRoutes); // بوابات القراءات الصحية
+app.use('/api/auth', authRoutes);             // بوابات الدخول والبروفايل
+app.use('/api/health', healthRoutes);         // بوابات القراءات الصحية القديمة
+app.use('/api/measurements', measurementRoutes); // 🚀 بوابات القياسات والـ Dashboard والأليرتس
+app.use('/api/chat', chatRoutes);             // 🚀 بوابات الشات وقائمة الدكاترة المتصلين
 
 // تجربة إن السيرفر شغال
 app.get('/', (req, res) => {
