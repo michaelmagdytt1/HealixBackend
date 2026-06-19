@@ -1,4 +1,5 @@
 require('dotenv').config();
+const mongoose = require('mongoose'); // 👈 1. استدعاء مكتبة الداتا بيز
 const app = require('./src/app');
 const { GoogleGenerativeAI } = require("@google/generative-ai"); 
 
@@ -35,8 +36,19 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// 🚀 2. كود الاتصال بالداتا بيز (بإضافة حل مشكلة Vercel)
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 5000, 
+  family: 4 // 👈 السر هنا عشان Vercel يشوف الداتا بيز
+})
+.then(() => {
+  console.log("✅ MongoDB Connected Successfully");
+})
+.catch((err) => {
+  console.error("❌ MongoDB Connection Error:", err);
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔗 Local: http://localhost:${PORT}`);
 });
-module.exports = app;
