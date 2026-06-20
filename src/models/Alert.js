@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const alertSchema = new mongoose.Schema({
-  // غيرنا اسمها لـ alertId عشان مونجو بيعمل _id خاص بيه لوحده
+  patientId: { type: String, required: true }, // 👈 السطر الجديد لحفظ معرف المريض
   alertId: { type: String, required: true }, 
   date: { type: String, required: true },
   riskLevel: { type: String, required: true },
