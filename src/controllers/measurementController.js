@@ -1,4 +1,5 @@
 const Measurement = require('../models/Measurement');
+const Alert = require('../models/Alert'); // 🚀 السطر ده جديد عشان نقرأ الإنذارات الحقيقية
 
 // دالة لاستلام القياسات وحفظها
 exports.addMeasurement = async (req, res) => {
@@ -113,7 +114,7 @@ exports.getDashboardData = async (req, res) => {
         // 1. جلب أحدث قراءة (Current Vitals)
         const latestMeasurement = await Measurement.findOne({ patientId }).sort({ createdAt: -1 });
 
-        // 2. جلب قراءات آخر 7 أيام لحساب المتوسطات والتنبيهات
+        // 2. جلب قراءات آخر 7 أيام لحساب المتوسطات
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -122,10 +123,9 @@ exports.getDashboardData = async (req, res) => {
             createdAt: { $gte: sevenDaysAgo }
         }).sort({ createdAt: -1 }); // بنرتب من الأحدث للأقدم
 
-        // تجهيز المتغيرات الافتراضية
+        // تجهيز المتغيرات الافتراضية للقرايات
         let currentVitals = { hr: 0, spo2: 0, temp: 0, steps: 0 };
         let avgVitals = { hr: 0, spo2: 0, temp: 0 };
-        let alerts = [];
 
         if (latestMeasurement) {
             currentVitals = {
@@ -137,27 +137,13 @@ exports.getDashboardData = async (req, res) => {
         }
 
         if (recentMeasurements.length > 0) {
-            // حساب المتوسطات
+            // حساب المتوسطات فقط
             let totalHr = 0, totalSpo2 = 0, totalTemp = 0;
             
             recentMeasurements.forEach(m => {
                 totalHr += m.hr;
                 totalSpo2 += m.spo2;
                 totalTemp += m.temp;
-
-                // 🚨 صناعة التنبيهات (Alerts) بناءً على القيم الطبية
-                if (m.fall) {
-                    alerts.push({ type: "danger", message: "Fall Detected! Patient needs attention.", date: m.createdAt });
-                }
-                if (m.hr > 110 || m.hr < 50) {
-                    alerts.push({ type: "warning", message: `Abnormal Heart Rate (${m.hr} BPM) detected`, date: m.createdAt });
-                }
-                if (m.spo2 < 92 && m.spo2 > 0) { // عشان لو بعت صفر بالغلط ميعملش رعب
-                    alerts.push({ type: "warning", message: `Low Oxygen Level (${m.spo2}%) detected`, date: m.createdAt });
-                }
-                if (m.temp > 38.5) {
-                    alerts.push({ type: "warning", message: `High Temperature (${m.temp}°C) detected`, date: m.createdAt });
-                }
             });
 
             // تقريب نواتج المتوسطات
@@ -168,14 +154,16 @@ exports.getDashboardData = async (req, res) => {
             };
         }
 
-        // بناخد أحدث 5 تنبيهات بس عشان الشاشة متزحمش
-        alerts = alerts.slice(0, 5);
+        // 🚀 3. جلب الإنذارات الحقيقية الخاصة بالمريض ده من الداتابيز
+        const realAlerts = await Alert.find({ patientId })
+            .sort({ createdAt: -1 }) // الأحدث الأول
+            .limit(5); // أحدث 5 إنذارات عشان الشاشة متزحمش
 
         // إرسال البيانات بنفس الشكل اللي الموبايل مستنيه بالظبط
         res.status(200).json({
             currentVitals,
             avgVitals,
-            alerts
+            alerts: realAlerts // 👈 هنا بعتنا الإنذارات الحقيقية
         });
 
     } catch (error) {
