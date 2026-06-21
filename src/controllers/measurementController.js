@@ -1,6 +1,6 @@
 const Measurement = require('../models/Measurement');
-const Alert = require('../models/Alert'); // 🚀 السطر ده عشان نقرأ الإنذارات الحقيقية
-const axios = require('axios'); // 🤖 استدعاء axios عشان نكلم سيرفر الذكاء الاصطناعي
+const Alert = require('../models/Alert'); 
+const axios = require('axios'); 
 
 // 🌐 لينك موديل الذكاء الاصطناعي بتاعك على Railway
 const AI_API_URL = "https://healix-ai-api-production.up.railway.app/predict";
@@ -12,13 +12,13 @@ const getAIDiagnosis = async (vitals) => {
             hr: vitals.hr,
             spo2: vitals.spo2,
             temp: vitals.temp,
-            age: 30, // قيمة افتراضية (تقدر تجيبها من بيانات المريض لو حابب)
-            sex_enc: 1 // 1 للذكر، 0 للأنثى
+            age: 30, 
+            sex_enc: 1 
         };
 
         const response = await axios.post(AI_API_URL, payload);
         console.log("🤖 تشخيص الذكاء الاصطناعي:", response.data);
-        return response.data; // هيرجع { status, prediction, severity_score }
+        return response.data; 
     } catch (error) {
         console.error("❌ فشل الاتصال بسيرفر الذكاء الاصطناعي:", error.message);
         return null;
@@ -42,18 +42,19 @@ exports.addMeasurement = async (req, res) => {
 
             if (aiStatus === "Danger") {
                 console.log("🚨 الذكاء الاصطناعي بيقول إن المريض ده في خطر!");
-                // 💡 هنا مستقبلاً ممكن تنادي دالة إرسال التليجرام لو حابب الـ AI هو اللي يضرب الإنذار
             }
         }
 
-        // حفظ القراءات في الداتابيز
+        // حفظ القراءات وتشخيص الـ AI في الداتابيز
         const newMeasurement = new Measurement({
-            patientId,
+            patientId, // 👈 الربط بالمريض
             hr,
             spo2,
             temp,
             steps,
-            fall
+            fall,
+            aiDiagnosis: aiStatus,         // 👈 حفظ تشخيص الذكاء الاصطناعي
+            aiSeverityScore: severityScore // 👈 حفظ نسبة الخطورة
         });
 
         await newMeasurement.save();
@@ -62,7 +63,7 @@ exports.addMeasurement = async (req, res) => {
         res.status(201).json({ 
             message: "تم حفظ القياسات بنجاح!", 
             data: newMeasurement,
-            ai_diagnosis: aiStatus, // 👈 التشخيص رايح للموبايل
+            ai_diagnosis: aiStatus, 
             ai_severity_score: severityScore
         });
 
@@ -76,21 +77,19 @@ exports.getHistoryByDate = async (req, res) => {
     try {
         const { patientId, date } = req.params;
 
-        // تحديد بداية ونهاية اليوم المختار (عشان نبحث في نطاق 24 ساعة)
         const startOfDay = new Date(date);
         startOfDay.setUTCHours(0, 0, 0, 0);
 
         const endOfDay = new Date(date);
         endOfDay.setUTCHours(23, 59, 59, 999);
 
-        // البحث عن آخر قراءة سجلها المريض في هذا اليوم
         const measurement = await Measurement.findOne({
             patientId: patientId,
             createdAt: {
                 $gte: startOfDay,
                 $lte: endOfDay
             }
-        }).sort({ createdAt: -1 }); // ترتيب تنازلي لجلب الأحدث
+        }).sort({ createdAt: -1 }); 
 
         if (!measurement) {
             return res.status(404).json({ message: "لا توجد بيانات لهذا التاريخ." });
@@ -106,43 +105,36 @@ exports.getHistoryByDate = async (req, res) => {
 // 3️⃣ دالة لجلب بيانات الرسم البياني
 exports.getChartData = async (req, res) => {
     try {
-        const { patientId, vitalType } = req.params; // vitalType: hr, temp, spo2, steps
-        const { range } = req.query; // Day, Week, Month
+        const { patientId, vitalType } = req.params; 
+        const { range } = req.query; 
 
-        // تحديد البداية بناءً على الفلتر
         let startDate = new Date();
         if (range === 'Week') {
             startDate.setDate(startDate.getDate() - 7);
         } else if (range === 'Month') {
             startDate.setMonth(startDate.getMonth() - 1);
         } else {
-            // Day
             startDate.setHours(0, 0, 0, 0);
         }
 
-        // جلب القراءات
         const measurements = await Measurement.find({
             patientId: patientId,
             createdAt: { $gte: startDate }
-        }).sort({ createdAt: 1 }); // ترتيب تصاعدي عشان الرسم البياني من القديم للحديث
+        }).sort({ createdAt: 1 }); 
 
-        // تجهيز الداتا للرسم البياني
         let labels = [];
         let data = [];
 
-        // تبسيط: بناخد آخر 6 قراءات عشان الرسم البياني ميبقاش زحمة
         const limitedMeasurements = measurements.slice(-6); 
 
         limitedMeasurements.forEach(m => {
             if (m[vitalType] !== undefined && m[vitalType] !== 0) {
-                // استخراج الساعة كـ Label (مثال: 10:30)
                 const date = new Date(m.createdAt);
                 labels.push(`${date.getHours()}:${date.getMinutes()}`);
                 data.push(m[vitalType]);
             }
         });
 
-        // لو مفيش داتا خالص نرجع أصفار
         if (labels.length === 0) {
             labels = ["No Data"];
             data = [0];
@@ -160,7 +152,7 @@ exports.getDashboardData = async (req, res) => {
     try {
         const { patientId } = req.params;
 
-        // 1. جلب أحدث قراءة (Current Vitals)
+        // 1. جلب أحدث قراءة
         const latestMeasurement = await Measurement.findOne({ patientId }).sort({ createdAt: -1 });
 
         // 2. جلب قراءات آخر 7 أيام لحساب المتوسطات
@@ -170,11 +162,14 @@ exports.getDashboardData = async (req, res) => {
         const recentMeasurements = await Measurement.find({
             patientId,
             createdAt: { $gte: sevenDaysAgo }
-        }).sort({ createdAt: -1 }); // بنرتب من الأحدث للأقدم
+        }).sort({ createdAt: -1 }); 
 
-        // تجهيز المتغيرات الافتراضية للقرايات
+        // تجهيز المتغيرات الافتراضية
         let currentVitals = { hr: 0, spo2: 0, temp: 0, steps: 0 };
         let avgVitals = { hr: 0, spo2: 0, temp: 0 };
+        
+        let currentAiDiagnosis = "Normal"; // 👈 متغير جديد
+        let currentAiSeverity = 0;         // 👈 متغير جديد
 
         if (latestMeasurement) {
             currentVitals = {
@@ -183,10 +178,13 @@ exports.getDashboardData = async (req, res) => {
                 temp: latestMeasurement.temp,
                 steps: latestMeasurement.steps
             };
+            
+            // 👈 سحبنا بيانات الـ AI من الداتابيز عشان نعرضها في الشاشة
+            currentAiDiagnosis = latestMeasurement.aiDiagnosis || "Normal";
+            currentAiSeverity = latestMeasurement.aiSeverityScore || 0;
         }
 
         if (recentMeasurements.length > 0) {
-            // حساب المتوسطات فقط
             let totalHr = 0, totalSpo2 = 0, totalTemp = 0;
             
             recentMeasurements.forEach(m => {
@@ -195,7 +193,6 @@ exports.getDashboardData = async (req, res) => {
                 totalTemp += m.temp;
             });
 
-            // تقريب نواتج المتوسطات
             avgVitals = {
                 hr: Math.round(totalHr / recentMeasurements.length),
                 spo2: Math.round(totalSpo2 / recentMeasurements.length),
@@ -203,16 +200,18 @@ exports.getDashboardData = async (req, res) => {
             };
         }
 
-        // 3. جلب الإنذارات الحقيقية الخاصة بالمريض ده من الداتابيز
+        // 3. جلب الإنذارات الحقيقية الخاصة بالمريض
         const realAlerts = await Alert.find({ patientId })
-            .sort({ createdAt: -1 }) // الأحدث الأول
-            .limit(5); // أحدث 5 إنذارات عشان الشاشة متزحمش
+            .sort({ createdAt: -1 }) 
+            .limit(5); 
 
-        // إرسال البيانات بنفس الشكل اللي الموبايل مستنيه بالظبط
+        // 4. إرسال البيانات النهائية للموبايل
         res.status(200).json({
             currentVitals,
             avgVitals,
-            alerts: realAlerts
+            alerts: realAlerts,
+            aiDiagnosis: currentAiDiagnosis,     // 👈 باعتين تشخيص الذكاء الاصطناعي
+            aiSeverityScore: currentAiSeverity   // 👈 باعتين نسبة الخطورة
         });
 
     } catch (error) {

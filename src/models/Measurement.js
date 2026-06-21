@@ -28,6 +28,16 @@ const measurementSchema = new mongoose.Schema({
   fall: { 
     type: Boolean,
     required: true
+  },
+
+  // 🤖 الحقول الجديدة الخاصة بتشخيص الذكاء الاصطناعي
+  aiDiagnosis: { 
+    type: String, 
+    default: "Normal" 
+  },
+  aiSeverityScore: { 
+    type: Number, 
+    default: 0 
   }
 
 }, { timestamps: true });
