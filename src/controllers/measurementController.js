@@ -1,11 +1,52 @@
 const Measurement = require('../models/Measurement');
-const Alert = require('../models/Alert'); // 🚀 السطر ده جديد عشان نقرأ الإنذارات الحقيقية
+const Alert = require('../models/Alert'); // 🚀 السطر ده عشان نقرأ الإنذارات الحقيقية
+const axios = require('axios'); // 🤖 استدعاء axios عشان نكلم سيرفر الذكاء الاصطناعي
 
-// دالة لاستلام القياسات وحفظها
+// 🌐 لينك موديل الذكاء الاصطناعي بتاعك على Railway
+const AI_API_URL = "https://healix-ai-api-production.up.railway.app/predict";
+
+// 🧠 دالة مساعدة للتواصل مع الذكاء الاصطناعي
+const getAIDiagnosis = async (vitals) => {
+    try {
+        const payload = {
+            hr: vitals.hr,
+            spo2: vitals.spo2,
+            temp: vitals.temp,
+            age: 30, // قيمة افتراضية (تقدر تجيبها من بيانات المريض لو حابب)
+            sex_enc: 1 // 1 للذكر، 0 للأنثى
+        };
+
+        const response = await axios.post(AI_API_URL, payload);
+        console.log("🤖 تشخيص الذكاء الاصطناعي:", response.data);
+        return response.data; // هيرجع { status, prediction, severity_score }
+    } catch (error) {
+        console.error("❌ فشل الاتصال بسيرفر الذكاء الاصطناعي:", error.message);
+        return null;
+    }
+};
+
+// 1️⃣ دالة لاستلام القياسات، فحصها بالـ AI، وحفظها
 exports.addMeasurement = async (req, res) => {
     try {
         const { patientId, hr, spo2, temp, steps, fall } = req.body;
 
+        // 🚀 نسأل الذكاء الاصطناعي رأيه في القرايات دي قبل أي حاجة!
+        const aiResult = await getAIDiagnosis({ hr, spo2, temp });
+
+        let aiStatus = "Normal";
+        let severityScore = 0;
+
+        if (aiResult && aiResult.status === "success") {
+            aiStatus = aiResult.prediction; // هيطلع "Normal" أو "Danger"
+            severityScore = aiResult.severity_score;
+
+            if (aiStatus === "Danger") {
+                console.log("🚨 الذكاء الاصطناعي بيقول إن المريض ده في خطر!");
+                // 💡 هنا مستقبلاً ممكن تنادي دالة إرسال التليجرام لو حابب الـ AI هو اللي يضرب الإنذار
+            }
+        }
+
+        // حفظ القراءات في الداتابيز
         const newMeasurement = new Measurement({
             patientId,
             hr,
@@ -16,13 +57,21 @@ exports.addMeasurement = async (req, res) => {
         });
 
         await newMeasurement.save();
-        res.status(201).json({ message: "تم حفظ القياسات بنجاح!", data: newMeasurement });
+
+        // الرد على الموبايل شامل تشخيص الذكاء الاصطناعي
+        res.status(201).json({ 
+            message: "تم حفظ القياسات بنجاح!", 
+            data: newMeasurement,
+            ai_diagnosis: aiStatus, // 👈 التشخيص رايح للموبايل
+            ai_severity_score: severityScore
+        });
+
     } catch (error) {
         res.status(500).json({ message: "خطأ في السيرفر", error: error.message });
     }
 };
 
-// دالة لجلب آخر قراءة للمريض في تاريخ محدد
+// 2️⃣ دالة لجلب آخر قراءة للمريض في تاريخ محدد
 exports.getHistoryByDate = async (req, res) => {
     try {
         const { patientId, date } = req.params;
@@ -54,7 +103,7 @@ exports.getHistoryByDate = async (req, res) => {
     }
 };
 
-// دالة لجلب بيانات الرسم البياني
+// 3️⃣ دالة لجلب بيانات الرسم البياني
 exports.getChartData = async (req, res) => {
     try {
         const { patientId, vitalType } = req.params; // vitalType: hr, temp, spo2, steps
@@ -106,7 +155,7 @@ exports.getChartData = async (req, res) => {
     }
 };
 
-// --- 🚀 الدالة الجديدة: جلب بيانات لوحة تحكم الطبيب (Dashboard) ---
+// 4️⃣ دالة جلب بيانات لوحة تحكم الطبيب (Dashboard)
 exports.getDashboardData = async (req, res) => {
     try {
         const { patientId } = req.params;
@@ -154,7 +203,7 @@ exports.getDashboardData = async (req, res) => {
             };
         }
 
-        // 🚀 3. جلب الإنذارات الحقيقية الخاصة بالمريض ده من الداتابيز
+        // 3. جلب الإنذارات الحقيقية الخاصة بالمريض ده من الداتابيز
         const realAlerts = await Alert.find({ patientId })
             .sort({ createdAt: -1 }) // الأحدث الأول
             .limit(5); // أحدث 5 إنذارات عشان الشاشة متزحمش
@@ -163,7 +212,7 @@ exports.getDashboardData = async (req, res) => {
         res.status(200).json({
             currentVitals,
             avgVitals,
-            alerts: realAlerts // 👈 هنا بعتنا الإنذارات الحقيقية
+            alerts: realAlerts
         });
 
     } catch (error) {
