@@ -15,20 +15,18 @@ const userSchema = new mongoose.Schema({
   age: { type: Number },
   weight: { type: Number }, // بالكيلوجرام
   height: { type: Number }, // بالسنتيمتر
-  gender: { type: String }, // حولناها String عشان الـ Enum ميزعلش لو الحالة مختلفة
+  gender: { type: String }, 
 
   // 👇 البيانات الخاصة ببروفايل الدكتور
   clinicName: { type: String }, // اسم العيادة
   nationalId: { type: String }, // الرقم القومي (14 رقم)
 
-  // 👇 🚀 الحقل الجديد الخاص ببروفايل فرد العائلة
+  // 👇 الحقل الخاص ببروفايل فرد العائلة
   relation: { type: String }, // نوع القرابة (أب، أم، ابن...)
-// 👇 روابط المتابعة والشات
 
+  // 👇 🔗 روابط المتابعة والشات
   linkedDoctors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   linkedPatients: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],  
-
-  createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true }); // 🚀 السطر ده بيسجل الوقت والتاريخ أوتوماتيك باحترافية
 
 module.exports = mongoose.model('User', userSchema);

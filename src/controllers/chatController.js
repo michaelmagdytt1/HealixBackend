@@ -1,12 +1,16 @@
 const Message = require('../models/Message');
 const User = require('../models/User');
 
-// 1. ربط المريض بالدكتور (لما الدكتور يضيف الـ ID بتاع المريض)
+// 1. ربط المريض بالدكتور
 exports.linkDoctorAndPatient = async (req, res) => {
     try {
         const { doctorId, patientId } = req.body;
         
-        // إضافة المريض لقائمة الدكتور، والدكتور لقائمة المريض (بدون تكرار)
+        if (!doctorId || !patientId) {
+            return res.status(400).json({ message: "Doctor ID or Patient ID is missing" });
+        }
+
+        // إضافة المريض لقائمة الدكتور، والدكتور لقائمة المريض
         await User.findByIdAndUpdate(doctorId, { $addToSet: { linkedPatients: patientId } });
         await User.findByIdAndUpdate(patientId, { $addToSet: { linkedDoctors: doctorId } });
 
@@ -28,7 +32,7 @@ exports.sendMessage = async (req, res) => {
     }
 };
 
-// 3. جلب الرسايل بين شخصين (دكتور ومريض)
+// 3. جلب الرسايل بين شخصين
 exports.getMessages = async (req, res) => {
     try {
         const { user1, user2 } = req.params;
@@ -37,23 +41,28 @@ exports.getMessages = async (req, res) => {
                 { sender: user1, receiver: user2 },
                 { sender: user2, receiver: user1 }
             ]
-        }).sort({ createdAt: 1 }); // ترتيب من القديم للجديد
+        }).sort({ createdAt: 1 }); 
         res.status(200).json(messages);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-// 4. 🚀 جلب قائمة الدكاترة الضايفين مريض معين (المريض بيشوف مين ضافه)
+// 4. 🚀 جلب قائمة الدكاترة 
 exports.getMyDoctors = async (req, res) => {
     try {
-        const { patientId } = req.params;
+        // 🚀 تأمين: بيقرأ البراميتر سواء كان اسمه patientId أو id في الـ Route
+        const patientId = req.params.patientId || req.params.id;
 
-        // السحر هنا: بنبحث عن أي مستخدم دوره "دكتور" وجوه قائمة مرضاه الـ ID بتاع المريض ده
+        if (!patientId) {
+            return res.status(400).json({ message: "Patient ID is required" });
+        }
+
+        // السحر هنا: بنبحث عن دكتور جوه قائمة مرضاه المريض ده
         const doctors = await User.find({
-            role: 'doctor',
+            role: { $in: ['doctor', 'Doctor'] }, // تأمين لحالة الحروف
             linkedPatients: patientId 
-        }).select('name fullName clinicName'); // بنجيب بس الاسم والعيادة عشان السرعة والأمان
+        }).select('name fullName clinicName'); 
 
         res.status(200).json(doctors);
     } catch (error) {
@@ -61,12 +70,11 @@ exports.getMyDoctors = async (req, res) => {
     }
 };
 
-// 5. 🚀 إلغاء ربط المريض بالطبيب (المستقبلة من زرار الـ Unlink الجديد)
+// 5. 🚀 إلغاء ربط المريض بالطبيب
 exports.unlinkDoctorAndPatient = async (req, res) => {
     try {
         const { doctorId, patientId } = req.body;
         
-        // إزالة الـ ID الخاص بكل طرف من قائمة الطرف الآخر
         await User.findByIdAndUpdate(doctorId, { $pull: { linkedPatients: patientId } });
         await User.findByIdAndUpdate(patientId, { $pull: { linkedDoctors: doctorId } });
 
