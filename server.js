@@ -1,20 +1,23 @@
 require('dotenv').config();
-const mongoose = require('mongoose'); // 👈 1. استدعاء مكتبة الداتا بيز
+const mongoose = require('mongoose');
 const app = require('./src/app');
 const { GoogleGenerativeAI } = require("@google/generative-ai"); 
 
 // استدعاء المسارات 
 const measurementRoutes = require('./src/routes/measurementRoutes');
-const alertRoutes = require('./src/routes/alertRoutes'); // 👈 السطر الجديد لاستدعاء مسار الإنذارات
+const alertRoutes = require('./src/routes/alertRoutes');
+const chatRoutes = require('./src/routes/chatRoutes'); // 👈 1. استدعاء مسار الشات البشري
 
 const PORT = process.env.PORT || 3000;
 
 // ربط المسارات بالسيرفر
 app.use('/api/measurements', measurementRoutes);
-app.use('/api/alerts', alertRoutes); // 👈 السطر الجديد لربط الإنذارات بالسيرفر
+app.use('/api/alerts', alertRoutes);
+app.use('/api/messages', chatRoutes); // 👈 2. ربط مسار الشات بالسيرفر (سميناه messages)
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// ده شات الذكاء الاصطناعي (زي ما هو)
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -38,10 +41,10 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// 🚀 2. كود الاتصال بالداتا بيز (بإضافة حل مشكلة Vercel)
+// كود الاتصال بالداتا بيز
 mongoose.connect(process.env.MONGO_URI, {
   serverSelectionTimeoutMS: 5000, 
-  family: 4 // 👈 السر هنا عشان Vercel يشوف الداتا بيز
+  family: 4 
 })
 .then(() => {
   console.log("✅ MongoDB Connected Successfully");

@@ -60,3 +60,18 @@ exports.getMyDoctors = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// 5. 🚀 إلغاء ربط المريض بالطبيب (المستقبلة من زرار الـ Unlink الجديد)
+exports.unlinkDoctorAndPatient = async (req, res) => {
+    try {
+        const { doctorId, patientId } = req.body;
+        
+        // إزالة الـ ID الخاص بكل طرف من قائمة الطرف الآخر
+        await User.findByIdAndUpdate(doctorId, { $pull: { linkedPatients: patientId } });
+        await User.findByIdAndUpdate(patientId, { $pull: { linkedDoctors: doctorId } });
+
+        res.status(200).json({ message: "تم إلغاء ربط المريض بالطبيب بنجاح!" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
