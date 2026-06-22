@@ -6,14 +6,16 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // استدعاء المسارات 
 const measurementRoutes = require('./src/routes/measurementRoutes');
 const alertRoutes = require('./src/routes/alertRoutes');
-const chatRoutes = require('./src/routes/chatRoutes'); // 👈 1. استدعاء مسار الشات البشري
+const chatRoutes = require('./src/routes/chatRoutes'); 
+const notificationRoutes = require('./src/routes/notificationRoutes'); // 👈 1. ضفنا استدعاء مسار الإشعارات هنا
 
 const PORT = process.env.PORT || 3000;
 
 // ربط المسارات بالسيرفر
 app.use('/api/measurements', measurementRoutes);
 app.use('/api/alerts', alertRoutes);
-app.use('/api/messages', chatRoutes); // 👈 2. ربط مسار الشات بالسيرفر (سميناه messages)
+app.use('/api/messages', chatRoutes); 
+app.use('/api/notifications', notificationRoutes); // 👈 2. ربطنا مسار الإشعارات بالسيرفر هنا
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
