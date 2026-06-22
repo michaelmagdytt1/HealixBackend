@@ -8,13 +8,13 @@ router.post('/link', chatController.linkDoctorAndPatient);
 // مسار إرسال رسالة
 router.post('/send', chatController.sendMessage);
 
-// مسار جلب الرسايل (متطابق مع الموبايل)
-router.get('/:user1/:user2', chatController.getMessages);
+// مسار إلغاء الربط (الجديد)
+router.post('/unlink', chatController.unlinkDoctorAndPatient);
 
-// مسار جلب دكاترة المريض (متطابق مع الموبايل)
+// 🚀 مسار جلب دكاترة المريض (لازم يكون فوق المسار المتغير عشان ميتبلعش)
 router.get('/mydoctors/:patientId', chatController.getMyDoctors);
 
-// 🚀 مسار إلغاء الربط (الجديد)
-router.post('/unlink', chatController.unlinkDoctorAndPatient);
+// مسار جلب الرسايل (متطابق مع الموبايل - لازم يكون آخر واحد تحت)
+router.get('/:user1/:user2', chatController.getMessages);
 
 module.exports = router;
