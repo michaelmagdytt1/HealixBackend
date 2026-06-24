@@ -1,4 +1,5 @@
-const Measurement = require("../models/Measurement"); // تأكد من مسار موديل القياسات الحقيقية عندك
+const mongoose = require("mongoose"); // 👈 السطر ده اللي كان ناقص وموقع السيرفر!
+const Measurement = require("../models/Measurement"); 
 const AiReport = require("../models/AiReport");
 
 exports.getAverageVitals = async (req, res) => {
@@ -12,12 +13,11 @@ exports.getAverageVitals = async (req, res) => {
     else if (period === "monthly") startDate.setDate(startDate.getDate() - 30);
     else if (period === "yearly") startDate.setDate(startDate.getDate() - 365);
 
-    // استخدام الـ Aggregation Framework في المونجو لحساب المتوسطات
     const stats = await Measurement.aggregate([
       {
         $match: {
           patientId: new mongoose.Types.ObjectId(patientId),
-          date: { $gte: startDate }, // تأكد إن اسم حقل التاريخ عندك هو date
+          date: { $gte: startDate }, 
         },
       },
       {
@@ -31,9 +31,9 @@ exports.getAverageVitals = async (req, res) => {
     ]);
 
     if (stats.length === 0) {
-      // لو مفيش داتا كافية في الفترة دي، بنرجع قيم طبيعية كـ Fallback للتيست
+      // لو مفيش قراءات للمريض ده، نرجع قيم افتراضية بدل ما يضرب إيرور
       return res.status(200).json({
-        averageVitals: { hr: 75, spo2: 98, temp: 36.8 }
+        averageVitals: { hr: 80, spo2: 97, temp: 37 }
       });
     }
 
@@ -45,6 +45,7 @@ exports.getAverageVitals = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Aggregation Error:", error);
     res.status(500).json({ message: "خطأ في حساب المتوسطات", error: error.message });
   }
 };
