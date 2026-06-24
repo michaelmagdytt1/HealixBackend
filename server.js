@@ -7,7 +7,8 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const measurementRoutes = require('./src/routes/measurementRoutes');
 const alertRoutes = require('./src/routes/alertRoutes');
 const chatRoutes = require('./src/routes/chatRoutes'); 
-const notificationRoutes = require('./src/routes/notificationRoutes'); // 👈 1. ضفنا استدعاء مسار الإشعارات هنا
+const notificationRoutes = require('./src/routes/notificationRoutes'); 
+const aiReportRoutes = require('./src/routes/aiReportRoutes'); // 👈 1. ضفنا استدعاء مسار التحليل الذكي هنا
 
 const PORT = process.env.PORT || 3000;
 
@@ -15,7 +16,8 @@ const PORT = process.env.PORT || 3000;
 app.use('/api/measurements', measurementRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/messages', chatRoutes); 
-app.use('/api/notifications', notificationRoutes); // 👈 2. ربطنا مسار الإشعارات بالسيرفر هنا
+app.use('/api/notifications', notificationRoutes); 
+app.use('/api', aiReportRoutes); // 👈 2. ربطنا مسار التحليل الذكي بالسيرفر هنا
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
